@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>行事曆共編系統</title>
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- FullCalendar 6.x -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/zh-tw.global.min.js"></script>
+
+  <!-- SheetJS for Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- PapaParse for CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <!-- docx.js for Word -->
+  <script src="https://unpkg.com/docx@7.8.0/build/index.js"></script>
+</head>
+<body>
+
+  <!-- ===== 1. Login Screen (shown before auth) ===== -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <h1>行事曆共編系統</h1>
+      <p>請使用 Google 帳號登入</p>
+      <div id="googleSignInBtn"></div>
+      <p class="login-hint">僅限授權帳號使用</p>
+    </div>
+  </div>
+
+  <!-- ===== 2. Main App Container (hidden until auth) ===== -->
+  <div id="appContainer" class="app-container hidden">
+
+    <!-- ===== 3. Header / Navbar ===== -->
+    <nav class="navbar">
+      <div class="nav-left">
+        <h1>行事曆共編系統</h1>
+        <span class="sync-indicator" id="syncIndicator" title="同步狀態">&#9679;</span>
+      </div>
+      <div class="nav-right">
+        <span class="user-badge" id="userBadge">
+          <!-- Filled by JS: user email + role badge -->
+        </span>
+        <button class="btn btn-secondary btn-sm" id="btnRefresh" onclick="CalendarApp.refresh()">
+          重新整理
+        </button>
+        <button class="btn btn-admin btn-sm" id="btnAdmin" onclick="AdminPanel.open()" style="display:none;">
+          管理
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btnSignOut" onclick="Auth.signOut()">
+          登出
+        </button>
+      </div>
+    </nav>
+
+    <!-- ===== 4. Debug Panel (admin only, collapsible) ===== -->
+    <div class="debug-panel hidden" id="debugPanel">
+      <div class="debug-header" onclick="UI.toggleDebug()">
+        <h3>除錯工具</h3>
+        <span class="toggle-icon">&#9660;</span>
+      </div>
+      <div class="debug-body">
+        <div class="debug-buttons">
+          <button class="btn btn-warning btn-sm" onclick="AdminPanel.testConnection()">測試連線</button>
+          <button class="btn btn-warning btn-sm" onclick="AdminPanel.showStats()">活動統計</button>
+          <button class="btn btn-warning btn-sm" onclick="UI.clearConsole()">清除訊息</button>
+        </div>
+        <div class="console-output" id="console"></div>
+      </div>
+    </div>
+
+    <!-- ===== 5. Settings Panel ===== -->
+    <div class="settings-panel" id="settingsPanel">
+      <h3>行事曆設定資訊</h3>
+      <div class="settings-info">
+        <div class="form-group">
+          <label>可新增活動的日期範圍</label>
+          <div class="date-range-display" id="dateRangeDisplay">
+            <!-- Filled by JS from system settings -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label>輸出標題設定</label>
+          <input type="text" id="exportTitle" class="form-input" placeholder="行事曆標題">
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 6. Event Form (inline) ===== -->
+    <div class="control-panel" id="eventFormPanel">
+      <h3 id="formTitle">新增活動</h3>
+      <input type="hidden" id="editEventId">
+      <div class="form-group">
+        <div class="date-inputs">
+          <div class="form-group">
+            <label for="startDate">開始日期</label>
+            <input type="date" id="startDate" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="endDate">結束日期</label>
+            <input type="date" id="endDate" class="form-input">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>活動內容</label>
+        <div class="voice-input-wrapper">
+          <input type="text" id="activityContent" class="form-input" placeholder="輸入活動內容">
+          <button class="voice-btn" onclick="Form.toggleVoice('activityContent')" title="語音輸入">&#127908;</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>備註</label>
+        <div class="voice-input-wrapper">
+          <textarea id="notes" class="form-input" rows="2" placeholder="輸入備註"></textarea>
+          <button class="voice-btn" onclick="Form.toggleVoice('notes')" title="語音輸入">&#127908;</button>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="btnSaveEvent" onclick="Form.save()">新增活動</button>
+        <button class="btn btn-secondary" onclick="Form.clear()">清除表單</button>
+        <button class="btn btn-danger hidden" id="btnCancelEdit" onclick="Form.cancelEdit()">取消編輯</button>
+      </div>
+    </div>
+
+    <!-- ===== 7. Operation Buttons ===== -->
+    <div class="button-group" id="operationButtons">
+      <button class="btn btn-success" onclick="CalendarApp.loadFromSheets()">
+        從 Google Sheets 載入
+      </button>
+      <button class="btn btn-primary" onclick="CalendarApp.syncToSheets()">
+        上傳至 Google Sheets
+      </button>
+      <button class="btn btn-info" onclick="window.open(CONFIG.SHEETS_URL, '_blank')">
+        檢視 Google Sheets
+      </button>
+      <button class="btn btn-warning" onclick="Export.toExcel()">下載 Excel</button>
+      <button class="btn btn-warning" onclick="Export.toPDF()">下載 PDF</button>
+      <button class="btn btn-warning" onclick="Export.toWord()">下載 Word</button>
+      <button class="btn btn-danger admin-only hidden" id="btnSyncCalendar" onclick="CalendarApp.syncToGoogleCalendar()">
+        新增 Google 行事曆
+      </button>
+    </div>
+
+    <!-- ===== 8. Important Notice ===== -->
+    <div class="notice-box" id="noticeBox">
+      <h4>重要操作提醒</h4>
+      <p>請務必先點選 <strong class="text-danger">"從 Google Sheets 載入"</strong> 已有的資料。</p>
+      <p>新增活動確認後，務必記得點選 <strong class="text-danger">"上傳至 Google Sheets"</strong>，資料才能保留。</p>
+      <p>確認所有活動內容都完全正確，才執行 <strong class="text-danger">"新增Google行事曆"</strong></p>
+      <div class="notice-hint">
+        提示：資料只有在上傳後才會永久保存，否則關閉頁面將會遺失！
+      </div>
+    </div>
+
+    <!-- ===== 9. Message Area ===== -->
+    <div id="message" class="message hidden"></div>
+
+    <!-- ===== 10. Loading Spinner ===== -->
+    <div class="loader hidden" id="loader"></div>
+
+    <!-- ===== 11. Calendar Preview Table ===== -->
+    <div class="calendar-preview">
+      <h3>行事曆預覽</h3>
+      <table id="calendarTable">
+        <thead>
+          <tr>
+            <th class="week-col">週次</th>
+            <th class="date-col">日期區間</th>
+            <th>活動內容</th>
+            <th>備註</th>
+          </tr>
+        </thead>
+        <tbody id="calendarBody">
+          <!-- Dynamically generated by table.js -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== 12. FullCalendar Section ===== -->
+    <div class="fullcalendar-section">
+      <h3>月曆檢視</h3>
+      <div id="fullcalendar"></div>
+    </div>
+
+  </div><!-- end #appContainer -->
+
+  <!-- ===== 14. Modals ===== -->
+
+  <!-- Admin Panel Modal -->
+  <div class="modal-overlay hidden" id="adminModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h2>使用者管理</h2>
+        <button class="modal-close" onclick="AdminPanel.close()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Tabs -->
+        <div class="admin-tabs">
+          <button class="tab-btn active" onclick="AdminPanel.switchTab('users')">使用者管理</button>
+          <button class="tab-btn" onclick="AdminPanel.switchTab('settings')">系統設定</button>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-content" id="usersTab">
+          <div class="admin-add-form">
+            <input type="email" id="newUserEmail" class="form-input" placeholder="Gmail 帳號">
+            <input type="text" id="newUserName" class="form-input" placeholder="姓名">
+            <select id="newUserRole" class="form-input">
+              <option value="editor">編輯者</option>
+              <option value="viewer">檢視者</option>
+            </select>
+            <button class="btn btn-primary" onclick="AdminPanel.addUser()">新增</button>
+          </div>
+          <div id="userList" class="user-list">
+            <p class="loading-text">載入中...</p>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content hidden" id="settingsTab">
+          <div class="form-group">
+            <label>學期開始日期</label>
+            <input type="date" id="settingSemesterStart" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>學期結束日期</label>
+            <input type="date" id="settingSemesterEnd" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>行事曆標題</label>
+            <input type="text" id="settingTitle" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Google Calendar ID</label>
+            <input type="text" id="settingCalendarId" class="form-input">
+          </div>
+          <button class="btn btn-primary" onclick="AdminPanel.saveSettings()">儲存設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal-overlay hidden" id="importModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h2>批次匯入</h2>
+        <button class="modal-close" onclick="Import.closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="import-tabs">
+          <button class="tab-btn active" onclick="Import.switchTab('file')">檔案匯入</button>
+          <button class="tab-btn" onclick="Import.switchTab('sheet')">Google Sheet 匯入</button>
+        </div>
+
+        <!-- File Import -->
+        <div class="tab-content" id="fileImportTab">
+          <div class="file-dropzone" id="fileDropzone">
+            <p>拖放 CSV / XLS / XLSX 檔案到這裡</p>
+            <p>或</p>
+            <input type="file" id="importFile" accept=".csv,.xls,.xlsx" onchange="Import.handleFile(event)" style="display:none">
+            <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">選擇檔案</button>
+          </div>
+          <div id="importPreview" class="import-preview hidden">
+            <h4>預覽（前 5 筆）</h4>
+            <table id="importPreviewTable"></table>
+            <div class="import-summary" id="importSummary"></div>
+            <button class="btn btn-success" onclick="Import.confirmImport()">確認匯入</button>
+            <button class="btn btn-secondary" onclick="Import.cancelImport()">取消</button>
+          </div>
+        </div>
+
+        <!-- Sheet Import -->
+        <div class="tab-content hidden" id="sheetImportTab">
+          <div class="form-group">
+            <label>Google Sheet URL</label>
+            <input type="url" id="importSheetUrl" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+          </div>
+          <button class="btn btn-primary" onclick="Import.fromGoogleSheet()">載入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal (for editing from FullCalendar click) -->
+  <div id="editModal" class="modal-overlay hidden">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h2>編輯活動</h2>
+        <button class="modal-close" onclick="UI.closeModal('editModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>開始日期</label>
+          <input type="date" id="editStartDate" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>結束日期</label>
+          <input type="date" id="editEndDate" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>活動內容</label>
+          <input type="text" id="editActivityContent" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>備註</label>
+          <textarea id="editNotes" class="form-input" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="editDeleteBtn" onclick="Form.deleteFromModal()">刪除</button>
+        <div class="modal-footer-right">
+          <button class="btn btn-secondary" onclick="UI.closeModal('editModal')">取消</button>
+          <button class="btn btn-primary" onclick="Form.saveFromModal()">儲存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h2 id="confirmTitle">確認</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="UI.confirmReject()">取消</button>
+        <button class="btn btn-danger" onclick="UI.confirmAccept()">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 15. Toast Container + Loading Overlay ===== -->
+  <div id="toastContainer"></div>
+
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p>載入中...</p>
+  </div>
+
+  <!-- ===== 16. Print iframe ===== -->
+  <iframe id="printFrame" style="display:none;"></iframe>
+
+  <!-- ===== 17. JavaScript Files ===== -->
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/sync.js"></script>
+  <script src="assets/js/form.js"></script>
+  <script src="assets/js/table.js"></script>
+  <script src="assets/js/calendar.js"></script>
+  <script src="assets/js/import.js"></script>
+  <script src="assets/js/export.js"></script>
+  <script src="assets/js/admin.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      Auth.init();
+    });
+  </script>
+
+</body>
+</html>

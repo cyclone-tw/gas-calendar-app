@@ -1,0 +1,12 @@
+{
+  "name": "gas-calendar-app",
+  "version": "2.0.0",
+  "description": "行事曆共編系統 - 暗色科技風",
+  "scripts": {
+    "dev": "npx serve . -p 3000 -C",
+    "start": "npx serve . -p 3000"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.2.0"
+  }
+}

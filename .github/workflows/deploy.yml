@@ -1,0 +1,79 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# 允許 GitHub Pages 部署
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時只跑一個部署
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  # ===== Job 1: 部署前端到 GitHub Pages =====
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 注入設定值（從 GitHub Secrets 讀取）
+      - name: Inject config values
+        run: |
+          sed -i "s|YOUR_GAS_WEB_APP_URL|${{ secrets.GAS_WEB_APP_URL }}|g" assets/js/config.js
+          sed -i "s|YOUR_GOOGLE_CLIENT_ID|${{ secrets.GOOGLE_CLIENT_ID }}|g" assets/js/config.js
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # 只上傳前端檔案（排除 gas/, _old/, .clasp.json 等）
+      - name: Upload frontend artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+          # .gitignore 已排除 _old/ 和 node_modules/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ===== Job 2: 部署 GAS 後端 =====
+  deploy-gas:
+    runs-on: ubuntu-latest
+    # 只有 gas/ 目錄有變更才跑
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      # 從 GitHub Secret 還原 clasp 認證
+      - name: Setup clasp auth
+        run: |
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+      # 填入 Script ID
+      - name: Setup clasp config
+        run: |
+          echo '{"scriptId":"${{ secrets.GAS_SCRIPT_ID }}","rootDir":"gas/"}' > .clasp.json
+
+      - name: Push to GAS
+        run: clasp push --force
+
+      # 建立新版本部署
+      - name: Deploy GAS Web App
+        run: |
+          clasp deploy --description "Auto deploy from GitHub Actions"
