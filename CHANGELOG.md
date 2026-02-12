@@ -187,3 +187,61 @@ GitHub Actions 每次 `clasp deploy` 建立**新的部署 URL**，但 `config.js
 2. GitHub Actions 改用 `clasp deploy -i ${{ secrets.GAS_DEPLOYMENT_ID }}` 更新同一個部署
 3. 新增 `GAS_DEPLOYMENT_ID` GitHub Secret
 4. 不再每次建立新的部署 URL，確保 config.js 的 API URL 永遠有效
+
+---
+
+## 2026-02-13 — 修正時間欄位時區偏移
+
+### 問題
+
+設定時間為早上 08:00-09:00，Google Sheet 資料正確，但前端顯示為 16:00-17:00（差 8 小時）。
+
+### 原因
+
+`formatTime()` 使用 `getHours()` / `getMinutes()`，這會套用 GAS 伺服器的時區（UTC+8 台北）。Google Sheets 內部以 UTC 儲存時間值，因此 `getHours()` 會加上 8 小時偏移。
+
+### 修正
+
+改用 `getUTCHours()` / `getUTCMinutes()` 取得原始 UTC 時間值，對應使用者在 Sheet 中輸入的時間。
+
+---
+
+## 2026-02-13 — 修正時間顯示異常 + 備註關聯活動
+
+### 問題 1：編輯後時間偶爾顯示完整時間戳
+
+編輯活動後，表格偶爾顯示 `Sat Dec 30 1899 16:00:00...`，重新整理後恢復正常。
+
+### 原因
+
+`formatActivityDate()` 接收到尚未經過 Server 格式化的原始時間值，直接串入顯示字串。
+
+### 修正
+
+在 `store.js` 的 `formatActivityDate()` 加入正則驗證：`validTime = (t) => t && /^\d{1,2}:\d{2}$/.test(t)`，只接受 `HH:MM` 格式，其他值一律忽略（顯示為全天）。
+
+### 問題 2：備註無法辨識對應活動
+
+同一週有多個活動各有備註時，備註欄只列出備註文字，看不出屬於哪個活動。
+
+### 修正
+
+- **`table.js`**：備註收集時保留活動名稱 `label: event.content`，渲染時加上前綴標籤 `活動名稱：備註內容`
+- **`export.js`**：匯出的備註也加上活動名稱前綴
+- **`style.css`**：新增 `.note-label` 樣式，較淡顏色 + 粗體
+
+---
+
+## 2026-02-13 — 修正 Toast 通知不會自動消失
+
+### 問題
+
+Toast 彈跳通知不會自動消失，持續堆疊在畫面上。
+
+### 原因
+
+`ui.js` 使用 `classList.remove('show')` + `transitionend` 事件來移除 Toast 元素。但 `style.css` 中 Toast 的出場/退場效果是用 CSS `animation`（`@keyframes toastSlideIn / toastSlideOut`），而非 CSS `transition`。因此 `transitionend` 事件永遠不會觸發，Toast 元素不會被移除。
+
+### 修正
+
+改用 `classList.add('toast-dismiss')` + `animationend` 事件，與 CSS 的 `.toast-dismiss` animation 動畫搭配。Toast 動畫結束後正確觸發 `animationend`，元素被移除。

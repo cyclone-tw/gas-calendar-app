@@ -10,11 +10,9 @@ const UI = {
     toast.textContent = message;
     container.appendChild(toast);
 
-    requestAnimationFrame(() => toast.classList.add('show'));
-
     setTimeout(() => {
-      toast.classList.remove('show');
-      toast.addEventListener('transitionend', () => toast.remove());
+      toast.classList.add('toast-dismiss');
+      toast.addEventListener('animationend', () => toast.remove());
     }, duration);
   },
 
