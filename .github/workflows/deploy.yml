@@ -34,12 +34,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      # 只上傳前端檔案（排除 gas/, _old/, .clasp.json 等）
       - name: Upload frontend artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
-          # .gitignore 已排除 _old/ 和 node_modules/
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -48,7 +46,6 @@ jobs:
   # ===== Job 2: 部署 GAS 後端 =====
   deploy-gas:
     runs-on: ubuntu-latest
-    # 只有 gas/ 目錄有變更才跑
     steps:
       - uses: actions/checkout@v4
 
@@ -60,10 +57,12 @@ jobs:
       - name: Install clasp
         run: npm install -g @google/clasp
 
-      # 從 GitHub Secret 還原 clasp 認證
+      # 從 GitHub Secret 還原 clasp 認證（用環境變數避免 shell 特殊字元問題）
       - name: Setup clasp auth
+        env:
+          CLASP_CREDS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
-          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+          printenv CLASP_CREDS > ~/.clasprc.json
 
       # 填入 Script ID
       - name: Setup clasp config
@@ -73,7 +72,6 @@ jobs:
       - name: Push to GAS
         run: clasp push --force
 
-      # 建立新版本部署
       - name: Deploy GAS Web App
         run: |
           clasp deploy --description "Auto deploy from GitHub Actions"
