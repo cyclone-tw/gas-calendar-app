@@ -74,4 +74,4 @@ jobs:
 
       - name: Deploy GAS Web App
         run: |
-          clasp deploy --description "Auto deploy from GitHub Actions"
+          clasp deploy -i ${{ secrets.GAS_DEPLOYMENT_ID }} -d "Auto deploy from GitHub Actions"
