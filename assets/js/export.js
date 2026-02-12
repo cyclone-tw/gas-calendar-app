@@ -17,19 +17,19 @@ const Export = {
         return evStart >= week.startDate && evStart <= week.endDate;
       }).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
-      if (weekEvents.length > 0) {
-        const activities = weekEvents.map(e =>
-          `${EventStore.formatActivityDate(e.startDate)} ${e.content}`
-        ).join('\n');
-        const notes = weekEvents.map(e => e.notes).filter(Boolean).join('\n');
+      const activities = weekEvents.length > 0
+        ? weekEvents.map(e => `${EventStore.formatActivityDate(e.startDate)} ${e.content}`).join('\n')
+        : '';
+      const notes = weekEvents.length > 0
+        ? weekEvents.map(e => e.notes).filter(Boolean).join('\n')
+        : '';
 
-        data.push({
-          week: week.num,
-          dateRange: `${week.start}~${week.end}`,
-          activities,
-          notes,
-        });
-      }
+      data.push({
+        week: week.num,
+        dateRange: `${week.start}~${week.end}`,
+        activities,
+        notes,
+      });
     });
 
     return data;
@@ -88,13 +88,13 @@ const Export = {
         h1 { text-align: center; font-size: 24px; margin-bottom: 10px; }
         .ts { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th, td { border: 1px solid #000; padding: 5px; vertical-align: top; word-wrap: break-word; }
-        th { background: #f0f0f0; text-align: center; font-weight: bold; }
+        th, td { border: 1px solid #000; padding: 8px 10px; vertical-align: top; word-wrap: break-word; }
+        th { background: #f0f0f0; text-align: center; font-weight: bold; padding: 10px; }
         .week-col { width: 8%; text-align: center; }
         .date-col { width: 20%; font-size: 10px; }
         .activity-col { width: 42%; }
         .note-col { width: 30%; }
-        td { white-space: pre-wrap; line-height: 1.4; }
+        td { white-space: pre-wrap; line-height: 1.8; }
       </style></head><body>
       <h1>${UI.escapeHtml(title)}</h1>
       <div class="ts">匯出時間：${timestamp}</div>
