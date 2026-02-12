@@ -254,7 +254,7 @@ function ensureSheetsInitialized() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
 
   // 確保行事曆工作表存在
-  getOrCreateSheet(ss, CONFIG.SHEET_NAME, ['開始日期', '結束日期', '活動內容', '備註', 'ID', '最後更新時間', '建立者', '是否刪除']);
+  getOrCreateSheet(ss, CONFIG.SHEET_NAME, ['開始日期', '結束日期', '活動內容', '備註', 'ID', '最後更新時間', '建立者', '是否刪除', '日曆事件ID']);
 
   // 確保使用者管理工作表存在
   getOrCreateSheet(ss, CONFIG.USERS_SHEET_NAME, ['Email', '角色', '姓名', '啟用']);
@@ -318,14 +318,14 @@ function initSettingsSheet(ss) {
 }
 
 /**
- * 確保行事曆工作表包含新增的 G、H 欄標題
+ * 確保行事曆工作表包含新增的 G、H、I 欄標題
  * 向後相容：不影響既有資料
  */
 function ensureCalendarSheetColumns(ss) {
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) return;
 
-  const headers = sheet.getRange(1, 1, 1, 8).getValues()[0];
+  const headers = sheet.getRange(1, 1, 1, 9).getValues()[0];
 
   // 檢查 G 欄（建立者）
   if (!headers[6] || String(headers[6]).trim() === '') {
@@ -335,6 +335,11 @@ function ensureCalendarSheetColumns(ss) {
   // 檢查 H 欄（是否刪除）
   if (!headers[7] || String(headers[7]).trim() === '') {
     sheet.getRange(1, 8).setValue('是否刪除');
+  }
+
+  // 檢查 I 欄（Google Calendar 事件 ID）
+  if (!headers[8] || String(headers[8]).trim() === '') {
+    sheet.getRange(1, 9).setValue('日曆事件ID');
   }
 }
 
@@ -1316,7 +1321,10 @@ function handleImportFromSheet(request, user, role) {
 /**
  * 處理 syncToCalendar 動作 - 將行事曆事件同步到 Google Calendar
  * 僅管理員可執行
- * 邏輯：檢查每個事件是否已存在於 Google Calendar，若不存在則建立
+ * 邏輯：透過 I 欄儲存的 Calendar Event ID 進行智慧同步
+ *   - 有 ID → 更新既有日曆事件（標題、日期）
+ *   - 沒 ID → 新建日曆事件，將 ID 寫回 Sheet
+ *   - 已刪除且有 ID → 從日曆刪除該事件，清除 ID
  */
 function handleSyncToCalendar(user, role) {
   try {
@@ -1329,7 +1337,6 @@ function handleSyncToCalendar(user, role) {
       return jsonResponse({ success: false, error: '無法存取 Google Calendar，請確認日曆 ID 是否正確' });
     }
 
-    // 讀取所有未刪除的事件
     const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
     const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
 
@@ -1339,72 +1346,111 @@ function handleSyncToCalendar(user, role) {
 
     const data = sheet.getDataRange().getValues();
     let createdCount = 0;
-    let skippedCount = 0;
+    let updatedCount = 0;
+    let deletedCount = 0;
     let errorCount = 0;
     const errors = [];
 
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
+      if (!row[0] && !row[2]) continue; // 跳過完全空白列
 
-      // 跳過已刪除或空白列
       const isDeleted = row.length > 7 && (row[7] === true || String(row[7]).toUpperCase() === 'TRUE');
-      if (isDeleted) continue;
-      if (!row[0] || !row[2]) continue;
+      const calendarEventId = row.length > 8 ? String(row[8] || '').trim() : '';
 
       try {
-        const title = String(row[2]);
-        const startDateStr = formatDate(row[0]);
-        const endDateStr = formatDate(row[1] || row[0]);
-
-        const startDate = new Date(startDateStr + 'T00:00:00');
-        const endDate = new Date(endDateStr + 'T23:59:59');
-
-        // 檢查是否已存在相同事件（同標題 + 同日期範圍內）
-        const existingEvents = calendar.getEvents(startDate, new Date(endDate.getTime() + 1000));
-        let alreadyExists = false;
-
-        for (const existing of existingEvents) {
-          if (existing.getTitle() === title) {
-            alreadyExists = true;
-            break;
+        // 已刪除的事件：如果有日曆 ID，從日曆移除
+        if (isDeleted) {
+          if (calendarEventId) {
+            try {
+              const existingEvent = calendar.getEventById(calendarEventId);
+              if (existingEvent) {
+                existingEvent.deleteEvent();
+                deletedCount++;
+              }
+            } catch (e) {
+              // 事件可能已被手動刪除，忽略
+            }
+            sheet.getRange(i + 1, 9).setValue(''); // 清除日曆事件 ID
           }
-        }
-
-        if (alreadyExists) {
-          skippedCount++;
           continue;
         }
 
-        // 判斷是否為全天事件（跨日或單日）
-        if (startDateStr === endDateStr) {
-          // 單日全天事件
-          calendar.createAllDayEvent(title, startDate);
-        } else {
-          // 多日全天事件（結束日期要加一天，Google Calendar 的慣例）
-          const endDatePlusOne = new Date(endDate.getTime() + 86400000);
-          calendar.createAllDayEvent(title, startDate, endDatePlusOne);
+        if (!row[0] || !row[2]) continue;
+
+        const title = String(row[2]);
+        const notes = row[3] ? String(row[3]) : '';
+        const startDateStr = formatDate(row[0]);
+        const endDateStr = formatDate(row[1] || row[0]);
+        const startDate = new Date(startDateStr + 'T00:00:00');
+
+        // 已有日曆事件 ID → 更新既有事件
+        if (calendarEventId) {
+          let existingEvent = null;
+          try {
+            existingEvent = calendar.getEventById(calendarEventId);
+          } catch (e) {
+            // ID 無效，當作新建
+          }
+
+          if (existingEvent) {
+            // 更新標題
+            existingEvent.setTitle(title);
+            // 更新描述（備註）
+            existingEvent.setDescription(notes);
+            // 更新日期
+            if (startDateStr === endDateStr) {
+              existingEvent.setAllDayDate(startDate);
+            } else {
+              const endDatePlusOne = new Date(new Date(endDateStr + 'T00:00:00').getTime() + 86400000);
+              existingEvent.setAllDayDates(startDate, endDatePlusOne);
+            }
+            updatedCount++;
+            continue;
+          }
+          // 如果找不到事件（被手動刪除），則繼續往下新建
         }
 
+        // 新建日曆事件
+        let newEvent;
+        if (startDateStr === endDateStr) {
+          newEvent = calendar.createAllDayEvent(title, startDate);
+        } else {
+          const endDatePlusOne = new Date(new Date(endDateStr + 'T00:00:00').getTime() + 86400000);
+          newEvent = calendar.createAllDayEvent(title, startDate, endDatePlusOne);
+        }
+
+        // 設定備註
+        if (notes) {
+          newEvent.setDescription(notes);
+        }
+
+        // 將日曆事件 ID 寫回 Sheet I 欄
+        sheet.getRange(i + 1, 9).setValue(newEvent.getId());
         createdCount++;
+
       } catch (eventErr) {
         errorCount++;
         errors.push('第 ' + (i + 1) + ' 列：' + eventErr.message);
       }
     }
 
-    const summary = '同步完成：新增 ' + createdCount + ' 筆，跳過 ' + skippedCount + ' 筆（已存在）';
-    const fullMessage = errorCount > 0
-      ? summary + '，失敗 ' + errorCount + ' 筆'
-      : summary;
+    const parts = [];
+    if (createdCount > 0) parts.push('新增 ' + createdCount + ' 筆');
+    if (updatedCount > 0) parts.push('更新 ' + updatedCount + ' 筆');
+    if (deletedCount > 0) parts.push('刪除 ' + deletedCount + ' 筆');
+    if (errorCount > 0) parts.push('失敗 ' + errorCount + ' 筆');
+    const summary = '同步完成：' + (parts.length > 0 ? parts.join('，') : '無需變更');
 
     return jsonResponse({
       success: true,
       data: {
         created: createdCount,
-        skipped: skippedCount,
+        updated: updatedCount,
+        deleted: deletedCount,
         errorCount: errorCount,
-        errors: errors.slice(0, 10), // 最多回傳 10 筆錯誤詳情
-        message: fullMessage,
+        errors: errors.slice(0, 10),
+        message: summary,
       },
     });
   } catch (err) {
