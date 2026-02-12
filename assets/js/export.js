@@ -21,7 +21,7 @@ const Export = {
         ? weekEvents.map(e => `${EventStore.formatActivityDate(e.startDate, e.startTime, e.endTime)} ${e.content}`).join('\n')
         : '';
       const notes = weekEvents.length > 0
-        ? weekEvents.map(e => e.notes).filter(Boolean).join('\n')
+        ? weekEvents.filter(e => e.notes).map(e => `${e.content}：${e.notes}`).join('\n')
         : '';
 
       data.push({

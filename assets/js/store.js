@@ -154,9 +154,10 @@ const EventStore = {
     const day = String(d.getDate()).padStart(2, '0');
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
     let result = `${m}-${day}(${weekDays[d.getDay()]})`;
-    if (startTime) {
+    const validTime = (t) => t && /^\d{1,2}:\d{2}$/.test(t);
+    if (validTime(startTime)) {
       result += ` ${startTime}`;
-      if (endTime) result += `-${endTime}`;
+      if (validTime(endTime)) result += `-${endTime}`;
     }
     return result;
   },

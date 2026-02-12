@@ -76,7 +76,7 @@ const Table = {
           if (!weekActivities[wn]) weekActivities[wn] = [];
           if (!weekNotes[wn]) weekNotes[wn] = [];
           weekActivities[wn].push(event);
-          if (event.notes) weekNotes[wn].push({ id: event.id, text: event.notes });
+          if (event.notes) weekNotes[wn].push({ id: event.id, text: event.notes, label: event.content });
           break;
         }
       }
@@ -130,7 +130,7 @@ const Table = {
         weekNotes[weekNum].forEach(note => {
           const div = document.createElement('div');
           div.className = 'note-item';
-          div.textContent = note.text;
+          div.innerHTML = `<span class="note-label">${UI.escapeHtml(note.label)}：</span>${UI.escapeHtml(note.text)}`;
           noteCell.appendChild(div);
         });
       }

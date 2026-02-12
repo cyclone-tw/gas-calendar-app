@@ -689,6 +689,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: #fbbf24;
 }
 
+.note-label {
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
 /* -------------------------------------------------------
    13. FullCalendar 6.x Dark Theme Overrides
    ------------------------------------------------------- */
