@@ -57,6 +57,21 @@ const Export = {
       { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
     ];
+    // 設定行高：標題列較高，資料列依內容行數動態調整
+    const rows = [];
+    rows[0] = { hpt: 30 };  // 標題
+    rows[1] = { hpt: 20 };  // 時間戳
+    rows[2] = { hpt: 15 };  // 空行
+    rows[3] = { hpt: 25 };  // 表頭
+    data.forEach((row, i) => {
+      const lines = Math.max(
+        (row.activities.match(/\n/g) || []).length + 1,
+        (row.notes.match(/\n/g) || []).length + 1,
+        1
+      );
+      rows[i + 4] = { hpt: Math.max(25, lines * 20) };
+    });
+    ws['!rows'] = rows;
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '行事曆');
@@ -126,7 +141,7 @@ const Export = {
     const data = this.getTableData();
 
     try {
-      const { Document, Packer, Paragraph, TextRun, Table: DocTable, TableCell, TableRow, WidthType, AlignmentType } = docx;
+      const { Document, Packer, Paragraph, TextRun, Table: DocTable, TableCell, TableRow, WidthType, AlignmentType, TableCellMargin } = docx;
 
       const doc = new Document({
         sections: [{
@@ -150,22 +165,31 @@ const Export = {
                 new TableRow({
                   children: ['週次', '日期區間', '活動內容', '備註'].map((h, i) =>
                     new TableCell({
-                      children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })], alignment: AlignmentType.CENTER })],
+                      children: [new Paragraph({ children: [new TextRun({ text: h, bold: true, size: 22 })], alignment: AlignmentType.CENTER, spacing: { before: 60, after: 60 } })],
                       width: { size: [8, 20, 42, 30][i], type: WidthType.PERCENTAGE },
                       shading: { fill: 'EEEEEE' },
+                      margins: { top: 80, bottom: 80, left: 120, right: 120 },
                     })
                   ),
                 }),
                 ...data.map(row =>
                   new TableRow({
                     children: [
-                      new TableCell({ children: [new Paragraph({ text: String(row.week), alignment: AlignmentType.CENTER })] }),
-                      new TableCell({ children: [new Paragraph(row.dateRange)] }),
                       new TableCell({
-                        children: row.activities.split('\n').map(a => new Paragraph({ text: a, spacing: { after: 100 } })),
+                        children: [new Paragraph({ text: String(row.week), alignment: AlignmentType.CENTER, spacing: { before: 40, after: 40 } })],
+                        margins: { top: 60, bottom: 60, left: 80, right: 80 },
                       }),
                       new TableCell({
-                        children: row.notes ? row.notes.split('\n').map(n => new Paragraph({ text: n, spacing: { after: 100 } })) : [new Paragraph('')],
+                        children: [new Paragraph({ text: row.dateRange, spacing: { before: 40, after: 40 } })],
+                        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                      }),
+                      new TableCell({
+                        children: row.activities.split('\n').map(a => new Paragraph({ text: a, spacing: { before: 20, after: 120 } })),
+                        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                      }),
+                      new TableCell({
+                        children: row.notes ? row.notes.split('\n').map(n => new Paragraph({ text: n, spacing: { before: 20, after: 120 } })) : [new Paragraph('')],
+                        margins: { top: 60, bottom: 60, left: 120, right: 120 },
                       }),
                     ],
                   })
