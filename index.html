@@ -151,12 +151,6 @@
 
     <!-- ===== 7. Operation Buttons ===== -->
     <div class="button-group" id="operationButtons">
-      <button class="btn btn-success" onclick="CalendarApp.loadFromSheets()">
-        從 Google Sheets 載入
-      </button>
-      <button class="btn btn-primary" onclick="CalendarApp.syncToSheets()">
-        上傳至 Google Sheets
-      </button>
       <button class="btn btn-info" onclick="window.open(CONFIG.SHEETS_URL, '_blank')">
         檢視 Google Sheets
       </button>
@@ -165,19 +159,8 @@
       <button class="btn btn-warning" onclick="Export.toPDF()">下載 PDF</button>
       <button class="btn btn-warning" onclick="Export.toWord()">下載 Word</button>
       <button class="btn btn-danger admin-only hidden" id="btnSyncCalendar" onclick="CalendarApp.syncToGoogleCalendar()">
-        新增 Google 行事曆
+        同步 Google 行事曆
       </button>
-    </div>
-
-    <!-- ===== 8. Important Notice ===== -->
-    <div class="notice-box" id="noticeBox">
-      <h4>重要操作提醒</h4>
-      <p>請務必先點選 <strong class="text-danger">"從 Google Sheets 載入"</strong> 已有的資料。</p>
-      <p>新增活動確認後，務必記得點選 <strong class="text-danger">"上傳至 Google Sheets"</strong>，資料才能保留。</p>
-      <p>確認所有活動內容都完全正確，才執行 <strong class="text-danger">"新增Google行事曆"</strong></p>
-      <div class="notice-hint">
-        提示：資料只有在上傳後才會永久保存，否則關閉頁面將會遺失！
-      </div>
     </div>
 
     <!-- ===== 9. Message Area ===== -->

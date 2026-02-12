@@ -146,10 +146,6 @@ const CalendarApp = {
     }
   },
 
-  async syncToSheets() {
-    UI.showToast('資料已自動儲存到 Google Sheets', 'info');
-  },
-
   refresh() {
     SyncManager.forceSync();
     UI.showToast('正在重新整理...', 'info');
