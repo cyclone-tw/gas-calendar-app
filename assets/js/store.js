@@ -148,12 +148,17 @@ const EventStore = {
     return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
   },
 
-  formatActivityDate(dateStr) {
+  formatActivityDate(dateStr, startTime, endTime) {
     const d = new Date(dateStr);
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-    return `${m}-${day}(${weekDays[d.getDay()]})`;
+    let result = `${m}-${day}(${weekDays[d.getDay()]})`;
+    if (startTime) {
+      result += ` ${startTime}`;
+      if (endTime) result += `-${endTime}`;
+    }
+    return result;
   },
 
   generateId() {

@@ -26,17 +26,26 @@ const CalendarView = {
       editable: false,
       selectable: Auth.isEditor(),
       events: (info, successCallback) => {
-        const events = EventStore.getAll().map(e => ({
-          id: e.id,
-          title: e.content,
-          start: e.startDate,
-          end: this.addOneDay(e.endDate),
-          allDay: true,
-          extendedProps: {
-            notes: e.notes,
-            createdBy: e.createdBy,
-          },
-        }));
+        const events = EventStore.getAll().map(e => {
+          const isTimed = !!e.startTime;
+          const event = {
+            id: e.id,
+            title: e.content,
+            allDay: !isTimed,
+            extendedProps: {
+              notes: e.notes,
+              createdBy: e.createdBy,
+            },
+          };
+          if (isTimed) {
+            event.start = e.startDate + 'T' + e.startTime;
+            event.end = e.endTime ? ((e.endDate || e.startDate) + 'T' + e.endTime) : null;
+          } else {
+            event.start = e.startDate;
+            event.end = this.addOneDay(e.endDate);
+          }
+          return event;
+        });
         successCallback(events);
       },
       eventClick: (info) => {

@@ -254,7 +254,7 @@ function ensureSheetsInitialized() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
 
   // 確保行事曆工作表存在
-  getOrCreateSheet(ss, CONFIG.SHEET_NAME, ['開始日期', '結束日期', '活動內容', '備註', 'ID', '最後更新時間', '建立者', '是否刪除', '日曆事件ID']);
+  getOrCreateSheet(ss, CONFIG.SHEET_NAME, ['開始日期', '結束日期', '活動內容', '備註', 'ID', '最後更新時間', '建立者', '是否刪除', '日曆事件ID', '開始時間', '結束時間']);
 
   // 確保使用者管理工作表存在
   getOrCreateSheet(ss, CONFIG.USERS_SHEET_NAME, ['Email', '角色', '姓名', '啟用']);
@@ -325,7 +325,7 @@ function ensureCalendarSheetColumns(ss) {
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) return;
 
-  const headers = sheet.getRange(1, 1, 1, 9).getValues()[0];
+  const headers = sheet.getRange(1, 1, 1, 11).getValues()[0];
 
   // 檢查 G 欄（建立者）
   if (!headers[6] || String(headers[6]).trim() === '') {
@@ -340,6 +340,16 @@ function ensureCalendarSheetColumns(ss) {
   // 檢查 I 欄（Google Calendar 事件 ID）
   if (!headers[8] || String(headers[8]).trim() === '') {
     sheet.getRange(1, 9).setValue('日曆事件ID');
+  }
+
+  // 檢查 J 欄（開始時間）
+  if (!headers[9] || String(headers[9]).trim() === '') {
+    sheet.getRange(1, 10).setValue('開始時間');
+  }
+
+  // 檢查 K 欄（結束時間）
+  if (!headers[10] || String(headers[10]).trim() === '') {
+    sheet.getRange(1, 11).setValue('結束時間');
   }
 }
 
@@ -593,6 +603,8 @@ function handleGetEvents(user, role) {
         id: String(row[4] || ''),
         lastUpdated: row[5] ? String(row[5]) : '',
         createdBy: row.length > 6 ? String(row[6] || '') : '',
+        startTime: row.length > 9 ? String(row[9] || '') : '',
+        endTime: row.length > 10 ? String(row[10] || '') : '',
       });
     }
 
@@ -655,6 +667,8 @@ function handleCheckForUpdates(request, user, role) {
             id: String(row[4] || ''),
             lastUpdated: row[5] ? String(row[5]) : '',
             createdBy: row.length > 6 ? String(row[6] || '') : '',
+            startTime: row.length > 9 ? String(row[9] || '') : '',
+            endTime: row.length > 10 ? String(row[10] || '') : '',
           });
         }
 
@@ -678,7 +692,7 @@ function handleCreateEvent(request, user, role) {
       return jsonResponse({ success: false, error: '權限不足，需要編輯者以上權限' });
     }
 
-    const { startDate, endDate, content, notes } = request;
+    const { startDate, endDate, content, notes, startTime, endTime } = request;
 
     // 驗證必填欄位
     if (!startDate || !content) {
@@ -695,7 +709,7 @@ function handleCreateEvent(request, user, role) {
     const eventId = generateEventId();
     const now = new Date().toISOString();
 
-    // 新增一列：A~H
+    // 新增一列：A~K
     const newRow = [
       startDate,                    // A: 開始日期
       endDate || startDate,         // B: 結束日期（預設同開始日期）
@@ -705,6 +719,9 @@ function handleCreateEvent(request, user, role) {
       now,                          // F: 最後更新時間
       user.email,                   // G: 建立者
       false,                        // H: 是否刪除
+      '',                           // I: 日曆事件ID
+      startTime || '',              // J: 開始時間
+      endTime || '',                // K: 結束時間
     ];
 
     sheet.appendRow(newRow);
@@ -732,7 +749,7 @@ function handleUpdateEvent(request, user, role) {
       return jsonResponse({ success: false, error: '權限不足，需要編輯者以上權限' });
     }
 
-    const { id, startDate, endDate, content, notes } = request;
+    const { id, startDate, endDate, content, notes, startTime, endTime } = request;
 
     if (!id) {
       return jsonResponse({ success: false, error: '缺少事件 ID' });
@@ -773,6 +790,8 @@ function handleUpdateEvent(request, user, role) {
     if (endDate !== undefined) sheet.getRange(rowNum, 2).setValue(endDate);
     if (content !== undefined) sheet.getRange(rowNum, 3).setValue(content);
     if (notes !== undefined) sheet.getRange(rowNum, 4).setValue(notes);
+    if (startTime !== undefined) sheet.getRange(rowNum, 10).setValue(startTime);  // J: 開始時間
+    if (endTime !== undefined) sheet.getRange(rowNum, 11).setValue(endTime);      // K: 結束時間
     sheet.getRange(rowNum, 6).setValue(now); // 更新最後修改時間
 
     updateLastModified();
@@ -892,6 +911,9 @@ function handleBatchImport(request, user, role) {
         now,
         user.email,
         false,
+        '',                              // I: 日曆事件ID
+        event.startTime || '',           // J: 開始時間
+        event.endTime || '',             // K: 結束時間
       ]);
 
       importedCount++;
@@ -900,7 +922,7 @@ function handleBatchImport(request, user, role) {
     // 一次性批量寫入（效能最佳化）
     if (newRows.length > 0) {
       const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow + 1, 1, newRows.length, 8).setValues(newRows);
+      sheet.getRange(lastRow + 1, 1, newRows.length, 11).setValues(newRows);
       updateLastModified();
     }
 
@@ -1379,10 +1401,12 @@ function handleSyncToCalendar(user, role) {
         if (!row[0] || !row[2]) continue;
 
         const title = String(row[2]);
-        const notes = row[3] ? String(row[3]) : '';
+        const eventNotes = row[3] ? String(row[3]) : '';
         const startDateStr = formatDate(row[0]);
         const endDateStr = formatDate(row[1] || row[0]);
-        const startDate = new Date(startDateStr + 'T00:00:00');
+        const startTime = row.length > 9 ? String(row[9] || '').trim() : '';
+        const endTime = row.length > 10 ? String(row[10] || '').trim() : '';
+        const isTimed = !!startTime;
 
         // 已有日曆事件 ID → 更新既有事件
         if (calendarEventId) {
@@ -1394,35 +1418,43 @@ function handleSyncToCalendar(user, role) {
           }
 
           if (existingEvent) {
-            // 更新標題
             existingEvent.setTitle(title);
-            // 更新描述（備註）
-            existingEvent.setDescription(notes);
-            // 更新日期
-            if (startDateStr === endDateStr) {
-              existingEvent.setAllDayDate(startDate);
+            existingEvent.setDescription(eventNotes);
+
+            if (isTimed) {
+              const startDT = new Date(startDateStr + 'T' + startTime + ':00');
+              const endDT = endTime
+                ? new Date(endDateStr + 'T' + endTime + ':00')
+                : new Date(startDT.getTime() + 3600000);
+              existingEvent.setTime(startDT, endDT);
+            } else if (startDateStr === endDateStr) {
+              existingEvent.setAllDayDate(new Date(startDateStr + 'T00:00:00'));
             } else {
               const endDatePlusOne = new Date(new Date(endDateStr + 'T00:00:00').getTime() + 86400000);
-              existingEvent.setAllDayDates(startDate, endDatePlusOne);
+              existingEvent.setAllDayDates(new Date(startDateStr + 'T00:00:00'), endDatePlusOne);
             }
             updatedCount++;
             continue;
           }
-          // 如果找不到事件（被手動刪除），則繼續往下新建
         }
 
         // 新建日曆事件
         let newEvent;
-        if (startDateStr === endDateStr) {
-          newEvent = calendar.createAllDayEvent(title, startDate);
+        if (isTimed) {
+          const startDT = new Date(startDateStr + 'T' + startTime + ':00');
+          const endDT = endTime
+            ? new Date(endDateStr + 'T' + endTime + ':00')
+            : new Date(startDT.getTime() + 3600000);
+          newEvent = calendar.createEvent(title, startDT, endDT);
+        } else if (startDateStr === endDateStr) {
+          newEvent = calendar.createAllDayEvent(title, new Date(startDateStr + 'T00:00:00'));
         } else {
           const endDatePlusOne = new Date(new Date(endDateStr + 'T00:00:00').getTime() + 86400000);
-          newEvent = calendar.createAllDayEvent(title, startDate, endDatePlusOne);
+          newEvent = calendar.createAllDayEvent(title, new Date(startDateStr + 'T00:00:00'), endDatePlusOne);
         }
 
-        // 設定備註
-        if (notes) {
-          newEvent.setDescription(notes);
+        if (eventNotes) {
+          newEvent.setDescription(eventNotes);
         }
 
         // 將日曆事件 ID 寫回 Sheet I 欄

@@ -18,7 +18,7 @@ const Export = {
       }).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
       const activities = weekEvents.length > 0
-        ? weekEvents.map(e => `${EventStore.formatActivityDate(e.startDate)} ${e.content}`).join('\n')
+        ? weekEvents.map(e => `${EventStore.formatActivityDate(e.startDate, e.startTime, e.endTime)} ${e.content}`).join('\n')
         : '';
       const notes = weekEvents.length > 0
         ? weekEvents.map(e => e.notes).filter(Boolean).join('\n')

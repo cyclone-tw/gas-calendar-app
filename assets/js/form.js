@@ -50,11 +50,14 @@ const Form = {
       return;
     }
 
+    const timeType = document.getElementById('timeType').value;
     const eventData = {
       startDate,
       endDate: endDate || startDate,
       content,
       notes,
+      startTime: timeType === 'timed' ? document.getElementById('startTime').value : '',
+      endTime: timeType === 'timed' ? document.getElementById('endTime').value : '',
     };
 
     try {
@@ -112,6 +115,17 @@ const Form = {
     document.getElementById('activityContent').value = event.content;
     document.getElementById('notes').value = event.notes || '';
 
+    // 時間設定
+    if (event.startTime) {
+      document.getElementById('timeType').value = 'timed';
+      document.getElementById('startTime').value = event.startTime;
+      document.getElementById('endTime').value = event.endTime || '';
+      document.getElementById('timeInputs').classList.remove('hidden');
+    } else {
+      document.getElementById('timeType').value = 'allDay';
+      document.getElementById('timeInputs').classList.add('hidden');
+    }
+
     document.getElementById('formTitle').textContent = '編輯活動';
     document.getElementById('btnSaveEvent').textContent = '更新活動';
     document.getElementById('btnCancelEdit').classList.remove('hidden');
@@ -135,6 +149,10 @@ const Form = {
     document.getElementById('endDate').value = today;
     document.getElementById('activityContent').value = '';
     document.getElementById('notes').value = '';
+    document.getElementById('timeType').value = 'allDay';
+    document.getElementById('timeInputs').classList.add('hidden');
+    document.getElementById('startTime').value = '08:00';
+    document.getElementById('endTime').value = '17:00';
   },
 
   // ===== Modal 編輯（從 FullCalendar 點擊）=====
@@ -147,6 +165,17 @@ const Form = {
     document.getElementById('editActivityContent').value = event.content;
     document.getElementById('editNotes').value = event.notes || '';
     document.getElementById('editModal').dataset.eventId = id;
+
+    // 時間設定
+    if (event.startTime) {
+      document.getElementById('editTimeType').value = 'timed';
+      document.getElementById('editStartTime').value = event.startTime;
+      document.getElementById('editEndTime').value = event.endTime || '';
+      document.getElementById('editTimeInputs').classList.remove('hidden');
+    } else {
+      document.getElementById('editTimeType').value = 'allDay';
+      document.getElementById('editTimeInputs').classList.add('hidden');
+    }
 
     // 權限控制
     const canEdit = Auth.isAdmin() || (Auth.isEditor() && (!event.createdBy || event.createdBy === Auth.getEmail()));
@@ -162,11 +191,14 @@ const Form = {
 
   async saveFromModal() {
     const id = document.getElementById('editModal').dataset.eventId;
+    const editTimeType = document.getElementById('editTimeType').value;
     const eventData = {
       startDate: document.getElementById('editStartDate').value,
       endDate: document.getElementById('editEndDate').value,
       content: document.getElementById('editActivityContent').value.trim(),
       notes: document.getElementById('editNotes').value.trim(),
+      startTime: editTimeType === 'timed' ? document.getElementById('editStartTime').value : '',
+      endTime: editTimeType === 'timed' ? document.getElementById('editEndTime').value : '',
     };
 
     if (!eventData.startDate || !eventData.content) {
@@ -234,6 +266,14 @@ const Form = {
     } finally {
       UI.showLoader(false);
     }
+  },
+
+  // ===== 時間設定切換 =====
+  toggleTimeInputs(prefix) {
+    const selectId = prefix === 'edit' ? 'editTimeType' : 'timeType';
+    const containerId = prefix === 'edit' ? 'editTimeInputs' : 'timeInputs';
+    const isTimed = document.getElementById(selectId).value === 'timed';
+    document.getElementById(containerId).classList.toggle('hidden', !isTimed);
   },
 
   // ===== 語音輸入 =====

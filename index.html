@@ -112,6 +112,23 @@
         </div>
       </div>
       <div class="form-group">
+        <label>時間設定</label>
+        <select id="timeType" class="form-input" onchange="Form.toggleTimeInputs()">
+          <option value="allDay">全天</option>
+          <option value="timed">指定時間</option>
+        </select>
+        <div class="date-inputs hidden" id="timeInputs">
+          <div class="form-group">
+            <label for="startTime">開始時間</label>
+            <input type="time" id="startTime" class="form-input" value="08:00">
+          </div>
+          <div class="form-group">
+            <label for="endTime">結束時間</label>
+            <input type="time" id="endTime" class="form-input" value="17:00">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
         <label>活動內容</label>
         <div class="voice-input-wrapper">
           <input type="text" id="activityContent" class="form-input" placeholder="輸入活動內容">
@@ -308,6 +325,23 @@
         <div class="form-group">
           <label>結束日期</label>
           <input type="date" id="editEndDate" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>時間設定</label>
+          <select id="editTimeType" class="form-input" onchange="Form.toggleTimeInputs('edit')">
+            <option value="allDay">全天</option>
+            <option value="timed">指定時間</option>
+          </select>
+          <div class="date-inputs hidden" id="editTimeInputs">
+            <div class="form-group">
+              <label for="editStartTime">開始時間</label>
+              <input type="time" id="editStartTime" class="form-input" value="08:00">
+            </div>
+            <div class="form-group">
+              <label for="editEndTime">結束時間</label>
+              <input type="time" id="editEndTime" class="form-input" value="17:00">
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>活動內容</label>

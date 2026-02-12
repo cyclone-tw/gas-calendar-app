@@ -100,7 +100,7 @@ const Table = {
 
         const textSpan = document.createElement('span');
         textSpan.className = 'activity-text';
-        textSpan.textContent = `${EventStore.formatActivityDate(event.startDate)} ${event.content}`;
+        textSpan.textContent = `${EventStore.formatActivityDate(event.startDate, event.startTime, event.endTime)} ${event.content}`;
         div.appendChild(textSpan);
 
         if (isEditor) {
