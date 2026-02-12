@@ -449,6 +449,17 @@ function getLastModified() {
  * @param {Date|string} date
  * @returns {string}
  */
+function formatTime(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return padZero(val.getHours()) + ':' + padZero(val.getMinutes());
+  }
+  var s = String(val).trim();
+  var match = s.match(/(\d{1,2}):(\d{2})/);
+  if (match) return padZero(match[1]) + ':' + padZero(match[2]);
+  return '';
+}
+
 function formatDate(date) {
   if (!date) return '';
 
@@ -603,8 +614,8 @@ function handleGetEvents(user, role) {
         id: String(row[4] || ''),
         lastUpdated: row[5] ? String(row[5]) : '',
         createdBy: row.length > 6 ? String(row[6] || '') : '',
-        startTime: row.length > 9 ? String(row[9] || '') : '',
-        endTime: row.length > 10 ? String(row[10] || '') : '',
+        startTime: row.length > 9 ? formatTime(row[9]) : '',
+        endTime: row.length > 10 ? formatTime(row[10]) : '',
       });
     }
 
@@ -1404,8 +1415,8 @@ function handleSyncToCalendar(user, role) {
         const eventNotes = row[3] ? String(row[3]) : '';
         const startDateStr = formatDate(row[0]);
         const endDateStr = formatDate(row[1] || row[0]);
-        const startTime = row.length > 9 ? String(row[9] || '').trim() : '';
-        const endTime = row.length > 10 ? String(row[10] || '').trim() : '';
+        const startTime = row.length > 9 ? formatTime(row[9]) : '';
+        const endTime = row.length > 10 ? formatTime(row[10]) : '';
         const isTimed = !!startTime;
 
         // 已有日曆事件 ID → 更新既有事件
