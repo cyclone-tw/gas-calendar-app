@@ -452,7 +452,8 @@ function getLastModified() {
 function formatTime(val) {
   if (!val) return '';
   if (val instanceof Date) {
-    return padZero(val.getHours()) + ':' + padZero(val.getMinutes());
+    // Sheets 時間值以 UTC 儲存，用 getUTCHours 避免時區偏移
+    return padZero(val.getUTCHours()) + ':' + padZero(val.getUTCMinutes());
   }
   var s = String(val).trim();
   var match = s.match(/(\d{1,2}):(\d{2})/);
