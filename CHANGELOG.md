@@ -148,6 +148,27 @@
 
 ---
 
+## 2026-02-13 — 修正時間欄位顯示為完整時間戳
+
+### 問題
+
+設定指定時間（如 08:00-09:00）後，表格顯示為 `Sat Dec 30 1899 16:00:00 GMT+0800 (台北標準時間)` 而非 `08:00`。
+
+### 原因
+
+Google Sheets 將時間值（如 `08:00`）內部儲存為 **Date 物件**（以 1899-12-30 為基準日期）。GAS 用 `getValues()` 讀取時拿到的是 Date 物件，直接 `String()` 轉換會輸出完整時間戳。
+
+### 修正
+
+新增 `formatTime()` 工具函式：
+- 偵測到 Date 物件 → 用 `getHours()` + `getMinutes()` 提取 `HH:MM`
+- 偵測到字串 → 用正則匹配 `HH:MM` 格式
+- 空值 → 回傳空字串
+
+影響位置：`handleGetEvents`、`handleCheckForUpdates`、`handleSyncToCalendar` 共 3 處讀取時間的邏輯。
+
+---
+
 ## 2026-02-13 — 修正 GAS 部署版本問題
 
 ### 問題
