@@ -60,8 +60,9 @@ const Import = {
     reader.onload = (e) => {
       try {
         const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        const firstSheet = wb.Sheets[wb.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { raw: false });
+        const sheetName = wb.SheetNames.includes('匯入資料') ? '匯入資料' : wb.SheetNames[0];
+        const sheet = wb.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { raw: false });
         this.parsedData = this.mapColumns(jsonData);
         this.showPreview();
       } catch (err) {
@@ -299,7 +300,7 @@ const Import = {
     a.href = url;
     a.download = '批次匯入範本.csv';
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
 
   downloadExcelTemplate() {
