@@ -251,4 +251,74 @@ const Import = {
       }
     });
   },
+
+  // ===== 範本下載 =====
+  downloadCSVTemplate() {
+    const headers = ['開始日期', '結束日期', '開始時間', '結束時間', '活動內容', '備註'];
+    const examples = [
+      ['2026-03-02', '', '', '', '開學日', '全校師生'],
+      ['2026-03-10', '2026-03-11', '09:00', '12:00', '校外教學', '一、二年級參加'],
+      ['2026-03-15', '', '', '', '補假', ''],
+    ];
+
+    const rows = [headers, ...examples];
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '批次匯入範本.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  downloadExcelTemplate() {
+    const wb = XLSX.utils.book_new();
+
+    // === Sheet 1: 填寫說明 ===
+    const instructions = [
+      ['行事曆批次匯入 — 填寫說明'],
+      [''],
+      ['欄位名稱', '格式', '必填', '說明'],
+      ['開始日期', 'YYYY-MM-DD', '是', '活動開始日期，例如 2026-03-02'],
+      ['結束日期', 'YYYY-MM-DD', '否', '活動結束日期，留空則與開始日期相同'],
+      ['開始時間', 'HH:MM', '否', '活動開始時間（24小時制），例如 09:00。留空表示全天活動'],
+      ['結束時間', 'HH:MM', '否', '活動結束時間（24小時制），例如 17:00。留空表示全天活動'],
+      ['活動內容', '文字', '是', '活動名稱或描述'],
+      ['備註', '文字', '否', '補充說明'],
+      [''],
+      ['注意事項：'],
+      ['1. 請在「匯入資料」工作表中填寫，從第 2 列開始（第 1 列為標頭，請勿修改）'],
+      ['2. 範例資料（灰色列）可直接覆蓋或刪除'],
+      ['3. 開始日期 和 活動內容 為必填欄位，缺少的列會被略過'],
+      ['4. 日期格式請統一使用 YYYY-MM-DD（如 2026-03-02）'],
+      ['5. 時間格式請使用 HH:MM 24小時制（如 09:00、14:30）'],
+      ['6. 匯入後可在系統中個別編輯修改'],
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(instructions);
+    ws1['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 6 }, { wch: 50 }];
+    ws1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
+    XLSX.utils.book_append_sheet(wb, ws1, '填寫說明');
+
+    // === Sheet 2: 匯入資料 ===
+    const data = [
+      ['開始日期', '結束日期', '開始時間', '結束時間', '活動內容', '備註'],
+      ['2026-03-02', '', '', '', '開學日', '全校師生'],
+      ['2026-03-10', '2026-03-11', '09:00', '12:00', '校外教學', '一、二年級參加'],
+      ['2026-03-15', '', '', '', '補假', ''],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(data);
+    ws2['!cols'] = [
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, '匯入資料');
+
+    XLSX.writeFile(wb, '批次匯入範本.xlsx');
+  },
 };
