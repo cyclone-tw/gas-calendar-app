@@ -252,6 +252,35 @@ const Import = {
     });
   },
 
+  // ===== 範本選單 =====
+  showTemplateMenu(e) {
+    const existing = document.getElementById('templateMenu');
+    if (existing) { existing.remove(); return; }
+
+    const menu = document.createElement('div');
+    menu.id = 'templateMenu';
+    menu.className = 'template-menu';
+    menu.innerHTML = `
+      <button onclick="Import.downloadExcelTemplate(); Import.hideTemplateMenu();">Excel 範本 (.xlsx)</button>
+      <button onclick="Import.downloadCSVTemplate(); Import.hideTemplateMenu();">CSV 範本 (.csv)</button>
+    `;
+
+    const rect = e.target.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    document.body.appendChild(menu);
+
+    setTimeout(() => {
+      document.addEventListener('click', Import.hideTemplateMenu, { once: true });
+    }, 0);
+  },
+
+  hideTemplateMenu() {
+    const menu = document.getElementById('templateMenu');
+    if (menu) menu.remove();
+  },
+
   // ===== 範本下載 =====
   downloadCSVTemplate() {
     const headers = ['開始日期', '結束日期', '開始時間', '結束時間', '活動內容', '備註'];
