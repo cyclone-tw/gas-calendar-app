@@ -77,6 +77,8 @@ const Import = {
       const mapped = {
         startDate: '',
         endDate: '',
+        startTime: '',
+        endTime: '',
         content: '',
         notes: '',
       };
@@ -87,6 +89,10 @@ const Import = {
           mapped.startDate = this.normalizeImportDate(val);
         } else if (['結束日期', 'enddate', '結束', 'end'].includes(k)) {
           mapped.endDate = this.normalizeImportDate(val);
+        } else if (['開始時間', 'starttime', '開始時段'].includes(k)) {
+          mapped.startTime = this.normalizeTime(val);
+        } else if (['結束時間', 'endtime', '結束時段'].includes(k)) {
+          mapped.endTime = this.normalizeTime(val);
         } else if (['活動內容', 'content', '活動', '內容', 'title', '名稱'].includes(k)) {
           mapped.content = String(val || '').trim();
         } else if (['備註', 'notes', 'note', '說明', 'description'].includes(k)) {
@@ -118,6 +124,16 @@ const Import = {
     return s;
   },
 
+  normalizeTime(val) {
+    if (!val) return '';
+    const s = String(val).trim();
+    const match = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      return match[1].padStart(2, '0') + ':' + match[2];
+    }
+    return '';
+  },
+
   // ===== 預覽 =====
   showPreview() {
     const container = document.getElementById('importPreview');
@@ -126,11 +142,13 @@ const Import = {
 
     // 建立表格
     const preview = this.parsedData.slice(0, 5);
-    let html = '<thead><tr><th>開始日期</th><th>結束日期</th><th>活動內容</th><th>備註</th></tr></thead><tbody>';
+    let html = '<thead><tr><th>開始日期</th><th>結束日期</th><th>開始時間</th><th>結束時間</th><th>活動內容</th><th>備註</th></tr></thead><tbody>';
     preview.forEach(row => {
       html += `<tr>
         <td>${UI.escapeHtml(row.startDate)}</td>
         <td>${UI.escapeHtml(row.endDate)}</td>
+        <td>${UI.escapeHtml(row.startTime || '')}</td>
+        <td>${UI.escapeHtml(row.endTime || '')}</td>
         <td>${UI.escapeHtml(row.content)}</td>
         <td>${UI.escapeHtml(row.notes)}</td>
       </tr>`;
