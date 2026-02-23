@@ -511,6 +511,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: var(--primary);
   color: #fff;
 }
+.template-hint {
+  text-align: center;
+  padding: 0.6rem;
+  margin-bottom: 0.8rem;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px dashed var(--primary, #6366f1);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted, #aaa);
+}
+.template-hint a {
+  color: var(--primary, #6366f1);
+  text-decoration: none;
+  font-weight: 600;
+  margin: 0 0.3rem;
+}
+.template-hint a:hover {
+  text-decoration: underline;
+}
 
 .btn-warning {
   background: var(--accent-warning);
