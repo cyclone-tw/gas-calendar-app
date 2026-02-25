@@ -102,11 +102,7 @@ const Form = {
       return;
     }
 
-    // 檢查權限
-    if (!Auth.isAdmin() && event.createdBy && event.createdBy !== Auth.getEmail()) {
-      UI.showToast('您只能編輯自己建立的活動', 'error');
-      return;
-    }
+    // 所有 editor 以上角色皆可共編任何活動
 
     this.editingId = id;
     document.getElementById('editEventId').value = id;
@@ -177,8 +173,8 @@ const Form = {
       document.getElementById('editTimeInputs').classList.add('hidden');
     }
 
-    // 權限控制
-    const canEdit = Auth.isAdmin() || (Auth.isEditor() && (!event.createdBy || event.createdBy === Auth.getEmail()));
+    // 所有 editor 以上角色皆可編輯/刪除任何活動
+    const canEdit = Auth.isEditor();
     const canDelete = canEdit;
 
     document.getElementById('editDeleteBtn').classList.toggle('hidden', !canDelete);
