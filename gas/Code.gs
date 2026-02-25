@@ -790,10 +790,7 @@ function handleUpdateEvent(request, user, role) {
       return jsonResponse({ success: false, error: '此事件已被刪除' });
     }
 
-    // 非管理員只能修改自己建立的事件
-    if (role !== 'admin' && createdBy && createdBy !== user.email.toLowerCase()) {
-      return jsonResponse({ success: false, error: '您只能修改自己建立的事件' });
-    }
+    // 所有 editor 以上角色皆可共編任何事件
 
     const now = new Date().toISOString();
 
@@ -853,10 +850,7 @@ function handleDeleteEvent(request, user, role) {
     const existingRow = sheet.getRange(rowNum, 1, 1, 8).getValues()[0];
     const createdBy = existingRow.length > 6 ? String(existingRow[6] || '').toLowerCase() : '';
 
-    // 非管理員只能刪除自己建立的事件
-    if (role !== 'admin' && createdBy && createdBy !== user.email.toLowerCase()) {
-      return jsonResponse({ success: false, error: '您只能刪除自己建立的事件' });
-    }
+    // 所有 editor 以上角色皆可刪除任何事件
 
     // 軟刪除：設定 H 欄為 TRUE，並更新修改時間
     sheet.getRange(rowNum, 8).setValue(true);
