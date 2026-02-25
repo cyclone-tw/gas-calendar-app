@@ -1375,6 +1375,7 @@ function handleSyncToCalendar(user, role) {
     const data = sheet.getDataRange().getValues();
     let createdCount = 0;
     let updatedCount = 0;
+    let skippedCount = 0;
     let deletedCount = 0;
     let errorCount = 0;
     const errors = [];
@@ -1424,6 +1425,43 @@ function handleSyncToCalendar(user, role) {
           }
 
           if (existingEvent) {
+            // 比對內容是否有變動，沒變就跳過，避免觸發 API 頻率限制
+            const calTitle = existingEvent.getTitle() || '';
+            const calDesc = existingEvent.getDescription() || '';
+            const calStart = existingEvent.getStartTime();
+            const calEnd = existingEvent.getEndTime();
+            const calIsAllDay = existingEvent.isAllDayEvent();
+
+            let needsUpdate = false;
+
+            if (calTitle !== title || calDesc !== eventNotes) {
+              needsUpdate = true;
+            } else if (isTimed) {
+              const startDT = new Date(startDateStr + 'T' + startTime + ':00');
+              const endDT = endTime
+                ? new Date(endDateStr + 'T' + endTime + ':00')
+                : new Date(startDT.getTime() + 3600000);
+              if (calIsAllDay || calStart.getTime() !== startDT.getTime() || calEnd.getTime() !== endDT.getTime()) {
+                needsUpdate = true;
+              }
+            } else {
+              // 全天事件：比對日期
+              const sheetStart = startDateStr;
+              const sheetEnd = endDateStr;
+              const calStartDate = formatDateObject(calStart);
+              const calEndDate = calIsAllDay
+                ? formatDateObject(new Date(calEnd.getTime() - 86400000))
+                : formatDateObject(calEnd);
+              if (!calIsAllDay || calStartDate !== sheetStart || (startDateStr !== endDateStr && calEndDate !== sheetEnd)) {
+                needsUpdate = true;
+              }
+            }
+
+            if (!needsUpdate) {
+              skippedCount++;
+              continue;
+            }
+
             existingEvent.setTitle(title);
             existingEvent.setDescription(eventNotes);
 
@@ -1476,6 +1514,7 @@ function handleSyncToCalendar(user, role) {
     const parts = [];
     if (createdCount > 0) parts.push('新增 ' + createdCount + ' 筆');
     if (updatedCount > 0) parts.push('更新 ' + updatedCount + ' 筆');
+    if (skippedCount > 0) parts.push('未變更 ' + skippedCount + ' 筆');
     if (deletedCount > 0) parts.push('刪除 ' + deletedCount + ' 筆');
     if (errorCount > 0) parts.push('失敗 ' + errorCount + ' 筆');
     const summary = '同步完成：' + (parts.length > 0 ? parts.join('，') : '無需變更');
