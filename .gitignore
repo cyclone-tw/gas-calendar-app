@@ -4,3 +4,5 @@ node_modules/
 .env
 _old/
 .clasprc.json
+docs/
+行事曆共編系統資料.xlsx
