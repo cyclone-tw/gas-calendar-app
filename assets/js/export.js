@@ -176,19 +176,23 @@ const Export = {
                   new TableRow({
                     children: [
                       new TableCell({
-                        children: [new Paragraph({ text: String(row.week), alignment: AlignmentType.CENTER, spacing: { before: 40, after: 40 } })],
+                        children: [new Paragraph({ children: [new TextRun({ text: String(row.week), size: 20 })], alignment: AlignmentType.CENTER, spacing: { before: 40, after: 40 } })],
                         margins: { top: 60, bottom: 60, left: 80, right: 80 },
                       }),
                       new TableCell({
-                        children: [new Paragraph({ text: row.dateRange, spacing: { before: 40, after: 40 } })],
+                        children: [new Paragraph({ children: [new TextRun({ text: row.dateRange, size: 20 })], spacing: { before: 40, after: 40 } })],
                         margins: { top: 60, bottom: 60, left: 120, right: 120 },
                       }),
                       new TableCell({
-                        children: row.activities.split('\n').map(a => new Paragraph({ text: a, spacing: { before: 20, after: 120 } })),
+                        children: row.activities
+                          ? row.activities.split('\n').map(a => new Paragraph({ children: [new TextRun({ text: a, size: 20 })], spacing: { before: 20, after: 120 } }))
+                          : [new Paragraph({})],
                         margins: { top: 60, bottom: 60, left: 120, right: 120 },
                       }),
                       new TableCell({
-                        children: row.notes ? row.notes.split('\n').map(n => new Paragraph({ text: n, spacing: { before: 20, after: 120 } })) : [new Paragraph('')],
+                        children: row.notes
+                          ? row.notes.split('\n').map(n => new Paragraph({ children: [new TextRun({ text: n, size: 20 })], spacing: { before: 20, after: 120 } }))
+                          : [new Paragraph({})],
                         margins: { top: 60, bottom: 60, left: 120, right: 120 },
                       }),
                     ],
