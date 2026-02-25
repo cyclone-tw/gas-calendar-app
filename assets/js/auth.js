@@ -41,7 +41,10 @@ const Auth = {
       UI.showLoading(true);
 
       // 解析 JWT 取得基本資訊（不驗證，驗證由 GAS 做）
-      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      // JWT 使用 base64url 編碼，需轉換為標準 base64 才能用 atob 解碼
+      const base64Url = idToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
       const email = payload.email;
       const name = payload.name || email;
 
