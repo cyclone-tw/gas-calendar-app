@@ -14,7 +14,7 @@ const CONFIG = {
   USERS_SHEET_NAME: '使用者管理',
   SETTINGS_SHEET_NAME: '系統設定',
   CALENDAR_ID: 'ksps1@ksps.ntct.edu.tw',
-  ADMIN_EMAILS: ['ksps1@ksps.ntct.edu.tw', 'cyclonetw@gmail.com'],
+  ADMIN_EMAILS: ['cyclonetw@gmail.com'],
 };
 
 // 角色權限等級（數字越大權限越高）
