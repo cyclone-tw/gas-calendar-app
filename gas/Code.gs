@@ -452,8 +452,8 @@ function getLastModified() {
 function formatTime(val) {
   if (!val) return '';
   if (val instanceof Date) {
-    // Sheets 時間值以 UTC 儲存，用 getUTCHours 避免時區偏移
-    return padZero(val.getUTCHours()) + ':' + padZero(val.getUTCMinutes());
+    // Sheets 時間值使用試算表時區，用 getHours 取得正確的本地時間
+    return padZero(val.getHours()) + ':' + padZero(val.getMinutes());
   }
   var s = String(val).trim();
   var match = s.match(/(\d{1,2}):(\d{2})/);
