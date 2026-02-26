@@ -6,3 +6,4 @@ _old/
 .clasprc.json
 docs/
 行事曆共編系統資料.xlsx
+*.json
