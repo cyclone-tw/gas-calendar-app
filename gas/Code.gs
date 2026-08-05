@@ -1347,17 +1347,63 @@ function handleImportFromSheet(request, user, role) {
 // ===================== Google Calendar 同步 =====================
 
 /**
+ * 讀取系統設定（含原始儲存格值，供 formatDate 正規化）
+ * @returns {Object}
+ */
+function readSystemSettingsMap() {
+  const settings = {};
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SETTINGS_SHEET_NAME);
+  if (!sheet) {
+    return settings;
+  }
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const key = String(data[i][0]).trim();
+    if (key) {
+      settings[key] = data[i][1];
+    }
+  }
+  return settings;
+}
+
+/**
+ * 判斷日期（YYYY-MM-DD）是否落在學期區間內（含起迄日）
+ * @param {string} dateStr
+ * @param {string} semesterStart
+ * @param {string} semesterEnd
+ * @returns {boolean}
+ */
+function isWithinSemesterRange(dateStr, semesterStart, semesterEnd) {
+  if (!dateStr || !semesterStart || !semesterEnd) return false;
+  return dateStr >= semesterStart && dateStr <= semesterEnd;
+}
+
+/**
  * 處理 syncToCalendar 動作 - 將行事曆事件同步到 Google Calendar
  * 僅管理員可執行
  * 邏輯：透過 I 欄儲存的 Calendar Event ID 進行智慧同步
+ *   - 僅處理系統設定學期區間（semesterStart ~ semesterEnd）內的活動
  *   - 有 ID → 更新既有日曆事件（標題、日期）
  *   - 沒 ID → 新建日曆事件，將 ID 寫回 Sheet
- *   - 已刪除且有 ID → 從日曆刪除該事件，清除 ID
+ *   - 已刪除且有 ID → 從日曆刪除該事件，清除 ID（同樣僅限區間內）
+ *   - 區間外列整列跳過（不新建、不更新、不刪除 Calendar 上既有舊事件）
  */
 function handleSyncToCalendar(user, role) {
   try {
     if (!requireRole(role, 'admin')) {
       return jsonResponse({ success: false, error: '權限不足，需要管理員權限' });
+    }
+
+    const systemSettings = readSystemSettingsMap();
+    const semesterStart = formatDate(systemSettings.semesterStart || '');
+    const semesterEnd = formatDate(systemSettings.semesterEnd || '');
+
+    if (!semesterStart || !semesterEnd) {
+      return jsonResponse({
+        success: false,
+        error: '請先在「管理 → 系統設定」填寫學期開始與結束日期，同步僅會處理該區間內的活動',
+      });
     }
 
     const calendar = CalendarApp.getCalendarById(CONFIG.CALENDAR_ID);
@@ -1376,6 +1422,7 @@ function handleSyncToCalendar(user, role) {
     let createdCount = 0;
     let updatedCount = 0;
     let skippedCount = 0;
+    let outOfRangeCount = 0;
     let deletedCount = 0;
     let errorCount = 0;
     const errors = [];
@@ -1386,6 +1433,13 @@ function handleSyncToCalendar(user, role) {
 
       const isDeleted = row.length > 7 && (row[7] === true || String(row[7]).toUpperCase() === 'TRUE');
       const calendarEventId = row.length > 8 ? String(row[8] || '').trim() : '';
+      const startDateStr = formatDate(row[0]);
+
+      // 學期區間外：整列跳過（含軟刪除），避免動到舊學期 Calendar 事件
+      if (!isWithinSemesterRange(startDateStr, semesterStart, semesterEnd)) {
+        outOfRangeCount++;
+        continue;
+      }
 
       try {
         // 已刪除的事件：如果有日曆 ID，從日曆移除
@@ -1409,7 +1463,6 @@ function handleSyncToCalendar(user, role) {
 
         const title = String(row[2]);
         const eventNotes = row[3] ? String(row[3]) : '';
-        const startDateStr = formatDate(row[0]);
         const endDateStr = formatDate(row[1] || row[0]);
         const startTime = row.length > 9 ? formatTime(row[9]) : '';
         const endTime = row.length > 10 ? formatTime(row[10]) : '';
@@ -1516,8 +1569,10 @@ function handleSyncToCalendar(user, role) {
     if (updatedCount > 0) parts.push('更新 ' + updatedCount + ' 筆');
     if (skippedCount > 0) parts.push('未變更 ' + skippedCount + ' 筆');
     if (deletedCount > 0) parts.push('刪除 ' + deletedCount + ' 筆');
+    if (outOfRangeCount > 0) parts.push('略過區間外 ' + outOfRangeCount + ' 筆');
     if (errorCount > 0) parts.push('失敗 ' + errorCount + ' 筆');
-    const summary = '同步完成：' + (parts.length > 0 ? parts.join('，') : '無需變更');
+    const summary = '同步完成（' + semesterStart + ' ~ ' + semesterEnd + '）：' +
+                     (parts.length > 0 ? parts.join('，') : '無需變更');
 
     return jsonResponse({
       success: true,
@@ -1525,8 +1580,11 @@ function handleSyncToCalendar(user, role) {
         created: createdCount,
         updated: updatedCount,
         deleted: deletedCount,
+        outOfRange: outOfRangeCount,
         errorCount: errorCount,
         errors: errors.slice(0, 10),
+        semesterStart: semesterStart,
+        semesterEnd: semesterEnd,
         message: summary,
       },
     });
