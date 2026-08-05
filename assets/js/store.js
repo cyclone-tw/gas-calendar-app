@@ -99,6 +99,7 @@ const EventStore = {
 
       weeks.push({
         num: weekNum,
+        label: weekNum === 0 ? '預備週' : String(weekNum),
         start: this.formatDate(weekStart),
         end: this.formatDate(weekEnd > end ? end : weekEnd),
         startDate: new Date(weekStart),

@@ -24,7 +24,7 @@ const Table = {
       // 週次
       const weekCell = document.createElement('td');
       weekCell.className = 'week-col';
-      weekCell.textContent = week.num;
+      weekCell.textContent = week.label;
       row.appendChild(weekCell);
 
       // 日期區間

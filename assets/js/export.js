@@ -25,7 +25,7 @@ const Export = {
         : '';
 
       data.push({
-        week: week.num,
+        week: week.label,
         dateRange: `${week.start}~${week.end}`,
         activities,
         notes,
