@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>行事曆共編系統 — 使用說明</title>
+  <style>
+    :root {
+      --ink: #1a2332;
+      --muted: #5a6577;
+      --line: #d4dae3;
+      --bg: #f7f5f1;
+      --card: #ffffff;
+      --accent: #0b6e4f;
+      --accent-soft: #e6f3ee;
+      --warn: #9a3412;
+      --warn-bg: #fff4ed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif TC", "Source Han Serif TC", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at top left, #efe8dc 0%, transparent 50%),
+        linear-gradient(180deg, #fbf9f5 0%, var(--bg) 100%);
+      line-height: 1.65;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 1.25rem 4rem;
+    }
+    header {
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid var(--ink);
+    }
+    .eyebrow {
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 0.5rem;
+    }
+    h1 {
+      font-size: clamp(1.75rem, 4vw, 2.35rem);
+      line-height: 1.25;
+      margin: 0 0 0.75rem;
+      font-weight: 700;
+    }
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    .lead a { color: var(--accent); }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 1rem 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+    nav.toc strong {
+      display: block;
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+    nav.toc ol {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.95rem;
+    }
+    nav.toc a { color: var(--ink); text-decoration: none; }
+    nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+    section { margin-bottom: 2.25rem; }
+    h2 {
+      font-size: 1.35rem;
+      margin: 0 0 0.85rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 1.25rem 0 0.5rem;
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+    }
+    p, li { font-size: 1rem; }
+    ol, ul { padding-left: 1.3rem; }
+    li { margin-bottom: 0.35rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0 1rem;
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.92rem;
+      background: var(--card);
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef1f5; font-weight: 600; }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 0.85rem 1rem;
+      margin: 1rem 0;
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.95rem;
+    }
+    .callout.warn {
+      border-left-color: var(--warn);
+      background: var(--warn-bg);
+    }
+    .callout strong { display: block; margin-bottom: 0.25rem; }
+    .记住 {
+      margin-top: 2.5rem;
+      padding: 1.25rem 1.4rem;
+      background: var(--ink);
+      color: #f5f2ea;
+      font-size: 1.05rem;
+    }
+    .记住 span {
+      display: block;
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      opacity: 0.7;
+      margin-bottom: 0.4rem;
+    }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--accent); }
+    @media print {
+      body { background: #fff; }
+      nav.toc { break-after: avoid; }
+      .callout, .记住 { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">操作手冊</p>
+      <h1>行事曆共編系統<br>使用說明</h1>
+      <p class="lead">
+        網址：<a href="https://cyclone-tw.github.io/gas-calendar-app/">https://cyclone-tw.github.io/gas-calendar-app/</a><br>
+        多人一起編輯學校行事曆。資料存於 Google Sheets；Google Calendar 需管理員手動同步。
+      </p>
+    </header>
+
+    <nav class="toc" aria-label="目錄">
+      <strong>目錄</strong>
+      <ol>
+        <li><a href="#login">登入與權限</a></li>
+        <li><a href="#add">新增活動</a></li>
+        <li><a href="#edit">編輯、刪除活動</a></li>
+        <li><a href="#import">批次匯入</a></li>
+        <li><a href="#export">匯出檔案</a></li>
+        <li><a href="#sync">同步到 Google 行事曆</a></li>
+        <li><a href="#admin">管理員專用</a></li>
+        <li><a href="#faq">常見問題</a></li>
+      </ol>
+    </nav>
+
+    <section id="login">
+      <h2>1. 登入與權限</h2>
+      <ol>
+        <li>用 <strong>Google 帳號</strong>登入（需先被管理員授權）。</li>
+        <li>角色決定可操作範圍：</li>
+      </ol>
+      <table>
+        <thead>
+          <tr><th>角色</th><th>可以做什麼</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>檢視者</td><td>查看、匯出</td></tr>
+          <tr><td>編輯者</td><td>新增／編輯／刪除活動、批次匯入、匯出</td></tr>
+          <tr><td>管理員</td><td>以上全部 + 管理使用者、改學期設定、同步 Google 行事曆</td></tr>
+        </tbody>
+      </table>
+      <p>右上角可看到帳號與角色；按「重新整理」可立即重抓最新資料。</p>
+    </section>
+
+    <section id="add">
+      <h2>2. 新增活動</h2>
+      <ol>
+        <li>在「新增活動」區塊填寫開始／結束日期、時間設定（全天或指定時段）、活動內容、備註。</li>
+        <li>日期須落在上方「可新增活動的日期範圍」內。</li>
+        <li>按<strong>新增活動</strong>。下方週次預覽與月曆檢視會立刻更新。</li>
+      </ol>
+      <div class="callout">
+        <strong>多人共編</strong>
+        系統約每 8 秒自動刷新一次，其他人新增或修改的內容也會進來。
+      </div>
+    </section>
+
+    <section id="edit">
+      <h2>3. 編輯、刪除活動</h2>
+      <ul>
+        <li>在「行事曆預覽」點活動 → 表單帶入 → 改完儲存。</li>
+        <li>刪除走網頁刪除（軟刪除：Sheets 列還在，只標記為已刪除）。</li>
+      </ul>
+      <div class="callout warn">
+        <strong>請不要直接在 Google Sheets 砍整列</strong>
+        那一列存有對應 Google Calendar 的事件 ID。整列刪掉後，Calendar 事件會變孤兒，系統再也無法自動清除。
+      </div>
+    </section>
+
+    <section id="import">
+      <h2>4. 批次匯入</h2>
+      <p>編輯者以上可用：</p>
+      <ol>
+        <li>按<strong>下載匯入範本</strong>（Excel 或 CSV）。</li>
+        <li>填好日期與活動內容。</li>
+        <li>按<strong>批次匯入</strong>上傳檔案，或從 Google Sheet 匯入。</li>
+        <li>預覽正確後按<strong>確認匯入</strong>。</li>
+      </ol>
+    </section>
+
+    <section id="export">
+      <h2>5. 匯出檔案</h2>
+      <p>可下載 Excel、PDF、Word。檔名與標題預設取自「輸出標題設定」；可暫改該欄再匯出，不影響系統正式標題。</p>
+      <p>週次表第一列若為學期開頭那週，會顯示<strong>預備週</strong>；之後從第 1 週起算。</p>
+    </section>
+
+    <section id="sync">
+      <h2>6. 同步到 Google 行事曆（重要）</h2>
+      <div class="callout warn">
+        <strong>不會自動同步</strong>
+        在網頁新增、修改、刪除活動，都不會立刻反映到 Google Calendar。
+        必須由<strong>管理員</strong>按紅色按鈕<strong>同步 Google 行事曆</strong>。
+      </div>
+      <table>
+        <thead>
+          <tr><th>網頁上的操作</th><th>按「同步」之後</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>新增活動</td><td>Calendar 新增對應事件</td></tr>
+          <tr><td>編輯活動</td><td>Calendar 更新內容／時間</td></tr>
+          <tr><td>刪除活動</td><td>Calendar 刪除該事件</td></tr>
+        </tbody>
+      </table>
+      <p>建議在大批次匯入或一輪編輯完成後，按一次即可。</p>
+    </section>
+
+    <section id="admin">
+      <h2>7. 管理員專用</h2>
+      <p>右上角「管理」：</p>
+      <h3>使用者管理</h3>
+      <p>新增帳號、調整角色（管理員／編輯者／檢視者）。</p>
+      <h3>系統設定</h3>
+      <ul>
+        <li>學期開始／結束日期（決定可新增範圍與週次）</li>
+        <li>行事曆標題（影響匯出預設標題）</li>
+        <li>Google Calendar ID</li>
+      </ul>
+      <p>換學期時請在這裡更新。也可按「檢視 Google Sheets」打開資料表，但日常編輯建議走網頁。</p>
+    </section>
+
+    <section id="faq">
+      <h2>8. 常見問題</h2>
+      <h3>Q：網頁加了活動，底下 Google 行事曆沒有？</h3>
+      <p>請管理員再按一次「同步 Google 行事曆」。</p>
+      <h3>Q：刪了活動，Calendar 上還在？</h3>
+      <p>同樣再按一次同步；刪除會在同步時才從 Calendar 清除。</p>
+      <h3>Q：直接改 Google Sheets，網頁沒變？</h3>
+      <p>手動改 Sheets 不會觸發自動刷新。請按右上角「重新整理」，或改用網頁／批次匯入。</p>
+      <h3>Q：手動加在 Sheets 的列，之後能在網頁編輯嗎？</h3>
+      <p>若沒有系統產生的 ID，網頁可能無法正確編輯／刪除。請優先用網頁新增或批次匯入。</p>
+      <h3>Q：學期區間或標題不對？</h3>
+      <p>請管理員到「管理 → 系統設定」更新並儲存。</p>
+    </section>
+
+    <div class="记住">
+      <span>一句話記住</span>
+      網頁／Sheets 是編輯與儲存處；Google Calendar 要管理員手動按「同步」才會跟上。
+    </div>
+
+    <footer>
+      Markdown 版：<a href="./使用說明.md">guide/使用說明.md</a>
+      · 系統首頁：<a href="../">行事曆共編系統</a>
+    </footer>
+  </div>
+</body>
+</html>

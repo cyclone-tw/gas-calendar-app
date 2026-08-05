@@ -2,6 +2,8 @@
 
 學校行事曆多人協作編輯系統。前端為獨立靜態網站，部署於 GitHub Pages；後端使用 Google Apps Script 作為 REST API 層，資料儲存於 Google Sheets。
 
+**使用者操作說明：** [Markdown](guide/使用說明.md) · [HTML 頁面](guide/使用說明.html)（部署後亦見於 GitHub Pages `/guide/使用說明.html`）
+
 ## 架構
 
 ```
