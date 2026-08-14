@@ -12,10 +12,8 @@ const Export = {
     const data = [];
 
     weeks.forEach(week => {
-      const weekEvents = events.filter(e => {
-        const evStart = new Date(e.startDate);
-        return evStart >= week.startDate && evStart <= week.endDate;
-      }).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      const weekEvents = events.filter(e => EventStore.isDateInWeek(e.startDate, week.start, week.end))
+        .sort((a, b) => EventStore.normalizeDate(a.startDate).localeCompare(EventStore.normalizeDate(b.startDate)));
 
       const activities = weekEvents.length > 0
         ? weekEvents.map(e => `${EventStore.formatActivityDate(e.startDate, e.startTime, e.endTime)} ${e.content}`).join('\n')

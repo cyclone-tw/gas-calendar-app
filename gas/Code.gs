@@ -971,7 +971,13 @@ function handleGetSettings(user, role) {
       const key = String(data[i][0]).trim();
       const value = data[i][1];
       if (key) {
-        settings[key] = value !== undefined && value !== null ? String(value) : '';
+        if (value instanceof Date && !isNaN(value.getTime())) {
+          settings[key] = (key === 'semesterStart' || key === 'semesterEnd')
+            ? formatDateObject(value)
+            : String(value);
+        } else {
+          settings[key] = value !== undefined && value !== null ? String(value) : '';
+        }
       }
     }
 

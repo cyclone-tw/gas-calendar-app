@@ -41,11 +41,8 @@ const Form = {
       return;
     }
 
-    // 檢查日期範圍
-    const semStart = new Date(EventStore.settings.semesterStart);
-    const semEnd = new Date(EventStore.settings.semesterEnd);
-    const actStart = new Date(startDate);
-    if (actStart < semStart || actStart > semEnd) {
+    // 檢查日期範圍（以 YYYY-MM-DD 字串比較，避免時區把週六／學期末日判到範圍外）
+    if (!EventStore.isInSemester(startDate)) {
       UI.showToast('活動日期超出學期範圍', 'error');
       return;
     }

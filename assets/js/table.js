@@ -67,11 +67,7 @@ const Table = {
       for (const row of rows) {
         const ws = row.dataset.weekStart;
         const we = row.dataset.weekEnd;
-        const evStart = new Date(event.startDate);
-        const weekStart = new Date(ws);
-        const weekEnd = new Date(we);
-
-        if (evStart >= weekStart && evStart <= weekEnd) {
+        if (EventStore.isDateInWeek(event.startDate, ws, we)) {
           const wn = row.dataset.weekNum;
           if (!weekActivities[wn]) weekActivities[wn] = [];
           if (!weekNotes[wn]) weekNotes[wn] = [];
@@ -91,7 +87,7 @@ const Table = {
       if (!actCell) return;
 
       // 排序
-      weekActivities[weekNum].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      weekActivities[weekNum].sort((a, b) => EventStore.normalizeDate(a.startDate).localeCompare(EventStore.normalizeDate(b.startDate)));
 
       weekActivities[weekNum].forEach(event => {
         const div = document.createElement('div');
