@@ -33,12 +33,12 @@ const EventStore = {
   },
 
   getByDateRange(start, end) {
-    const s = new Date(start);
-    const e = new Date(end);
+    const startKey = this.normalizeDate(start);
+    const endKey = this.normalizeDate(end);
     return this.getAll().filter(ev => {
-      const evStart = new Date(ev.startDate);
-      const evEnd = new Date(ev.endDate);
-      return evStart <= e && evEnd >= s;
+      const evStart = this.normalizeDate(ev.startDate);
+      const evEnd = this.normalizeDate(ev.endDate || ev.startDate);
+      return evStart && endKey && evStart <= endKey && evEnd >= startKey;
     });
   },
 
@@ -66,8 +66,8 @@ const EventStore = {
 
   // ===== 設定管理 =====
   updateSettings(settings) {
-    if (settings.semesterStart) this.settings.semesterStart = settings.semesterStart;
-    if (settings.semesterEnd) this.settings.semesterEnd = settings.semesterEnd;
+    if (settings.semesterStart) this.settings.semesterStart = this.normalizeDate(settings.semesterStart);
+    if (settings.semesterEnd) this.settings.semesterEnd = this.normalizeDate(settings.semesterEnd);
     if (settings.calendarTitle) this.settings.calendarTitle = settings.calendarTitle;
     if (settings.googleCalendarId) this.settings.googleCalendarId = settings.googleCalendarId;
     this._notify('settingsUpdated');
@@ -75,20 +75,22 @@ const EventStore = {
 
   // ===== 週次計算 =====
   calculateWeekNumber(date) {
-    const d = new Date(date);
-    const start = new Date(this.settings.semesterStart);
+    const d = this.parseLocalDate(date);
+    const start = this.parseLocalDate(this.settings.semesterStart);
+    if (!d || !start) return -1;
     // 取得學期開始那一週的週日
     const startSunday = new Date(start);
     startSunday.setDate(start.getDate() - start.getDay());
-    const diff = d - startSunday;
-    const weekNum = Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
+    const diffDays = Math.round((d - startSunday) / (24 * 60 * 60 * 1000));
+    const weekNum = Math.floor(diffDays / 7);
     return weekNum >= 0 ? weekNum : -1;
   },
 
   generateWeeks() {
     const weeks = [];
-    const start = new Date(this.settings.semesterStart);
-    const end = new Date(this.settings.semesterEnd);
+    const start = this.parseLocalDate(this.settings.semesterStart);
+    const end = this.parseLocalDate(this.settings.semesterEnd);
+    if (!start || !end) return weeks;
     let current = new Date(start);
     let weekNum = 0;
 
@@ -96,20 +98,32 @@ const EventStore = {
       const weekStart = new Date(current);
       const weekEnd = new Date(current);
       weekEnd.setDate(weekEnd.getDate() + 6);
+      const weekEndClamped = weekEnd > end ? new Date(end) : new Date(weekEnd);
 
       weeks.push({
         num: weekNum,
         label: weekNum === 0 ? '預備週' : String(weekNum),
         start: this.formatDate(weekStart),
-        end: this.formatDate(weekEnd > end ? end : weekEnd),
+        end: this.formatDate(weekEndClamped),
         startDate: new Date(weekStart),
-        endDate: new Date(weekEnd),
+        endDate: weekEndClamped,
       });
 
       current.setDate(current.getDate() + 7);
       weekNum++;
     }
     return weeks;
+  },
+
+  isDateInWeek(dateVal, weekStart, weekEnd) {
+    const dateKey = this.normalizeDate(dateVal);
+    const startKey = this.normalizeDate(weekStart);
+    const endKey = this.normalizeDate(weekEnd);
+    return !!(dateKey && startKey && endKey && dateKey >= startKey && dateKey <= endKey);
+  },
+
+  isInSemester(dateVal) {
+    return this.isDateInWeek(dateVal, this.settings.semesterStart, this.settings.semesterEnd);
   },
 
   // ===== 觀察者模式 =====
@@ -125,19 +139,44 @@ const EventStore = {
 
   // ===== 工具函式 =====
   normalizeDate(val) {
-    if (!val) return '';
+    if (!val && val !== 0) return '';
     if (val instanceof Date) {
       return this.formatDate(val);
     }
-    // 處理 ISO 格式
-    if (typeof val === 'string' && val.includes('T')) {
-      return val.split('T')[0];
+    const s = String(val).trim();
+    // 純日曆日不可當 UTC 解析，否則週六會錯位
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (iso) {
+      return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
     }
-    return String(val);
+    const parsed = new Date(s);
+    if (!isNaN(parsed.getTime())) {
+      return this.formatDate(parsed);
+    }
+    return '';
+  },
+
+  parseLocalDate(dateVal) {
+    const key = this.normalizeDate(dateVal);
+    const match = key.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  },
+
+  addDays(dateVal, days) {
+    const d = this.parseLocalDate(dateVal);
+    if (!d) return '';
+    d.setDate(d.getDate() + days);
+    return this.formatDate(d);
   },
 
   formatDate(date) {
-    const d = new Date(date);
+    if (typeof date === 'string') {
+      const key = this.normalizeDate(date);
+      if (key) return key;
+    }
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -145,12 +184,14 @@ const EventStore = {
   },
 
   formatDateChinese(date) {
-    const d = new Date(date);
+    const d = this.parseLocalDate(date) || (date instanceof Date ? date : new Date(date));
+    if (!d || isNaN(d.getTime())) return '';
     return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
   },
 
   formatActivityDate(dateStr, startTime, endTime) {
-    const d = new Date(dateStr);
+    const d = this.parseLocalDate(dateStr);
+    if (!d) return '';
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];

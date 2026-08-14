@@ -81,12 +81,9 @@ const CalendarView = {
     }
   },
 
-  // FullCalendar 的全天事件 end 是 exclusive，需要 +1 天
+  // FullCalendar 的全天事件 end 是 exclusive，需要 +1 個本地日曆日
   addOneDay(dateStr) {
-    if (!dateStr) return dateStr;
-    const d = new Date(dateStr);
-    d.setDate(d.getDate() + 1);
-    return EventStore.formatDate(d);
+    return EventStore.addDays(dateStr, 1);
   },
 };
 

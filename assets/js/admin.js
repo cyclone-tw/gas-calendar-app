@@ -151,8 +151,8 @@ const AdminPanel = {
       const result = await API.getSettings();
       if (result.success && result.settings) {
         const s = result.settings;
-        document.getElementById('settingSemesterStart').value = s.semesterStart || '';
-        document.getElementById('settingSemesterEnd').value = s.semesterEnd || '';
+        document.getElementById('settingSemesterStart').value = EventStore.normalizeDate(s.semesterStart) || '';
+        document.getElementById('settingSemesterEnd').value = EventStore.normalizeDate(s.semesterEnd) || '';
         document.getElementById('settingTitle').value = s.calendarTitle || '';
         document.getElementById('settingCalendarId').value = s.googleCalendarId || '';
       }
